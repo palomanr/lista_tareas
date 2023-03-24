@@ -21,15 +21,80 @@ const loadTasks = async () => {
 
 loadTasks();
 
-const add = () => {}
+const add = () => {
+    const input = document.getElementById('new-task');
+    const title = input.value.trim();
+  
+    if (title !== '') {
+      const newList = {
+        id: taskList.length + 1,
+        title,
+        done: false
+      };
+  
+      taskList.push(newList);
+      input.value = '';
+      renderTodos();
+    }
+}
 
-const remove = () => {}
+add();
 
-const toggleDone = () => {}
+
+
+const remove = () => {
+    tasks = taskList.filter(task => task.id !== id);
+    renderTodos();
+}
+
+remove();
+
+const toggleDone = () => {
+    tasks = tasks.map(task  => {
+        if (task.id === id) {
+          return {
+            ...task ,
+            done: !task.done
+          };
+        } else {
+          return task;
+        }
+      });
+      renderTodos();
+}
+
+toggleDone();
 
 const addButton = document.querySelector("#fab-add");
 
 addButton.addEventListener("touchend", add);
+
+
+
+function renderTodos() {
+  const list = document.getElementById('todos');
+  list.innerHTML = '';
+
+  todos.forEach(task  => {
+    const li = document.createElement('li');
+    li.textContent = task.title;
+
+    if (task.done) {
+      li.classList.add('done');
+    }
+
+    li.addEventListener('click', () => toggleDone(todo.id));
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Eliminar';
+    deleteButton.addEventListener('click', () => remove(todo.id));
+
+    li.appendChild(deleteButton);
+    list.appendChild(li);
+  });
+}
+
+
 
 
 

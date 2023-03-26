@@ -1,17 +1,21 @@
-<!--Contendrá la interfaz gráfica para nuestra aplicación. --> 
 <html lang="es">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Mis tareas</title>
-  <link rel="stylesheet" href="style.css" >
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.1.4/dist/sweetalert2.all.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
 </head>
 <body>
   <h1>Mis tareas</h1>
-    <div id="add-task-container">
-      <input id="task-name" type="text" placeholder="Introducir tarea..."></input>
+  <div id="tareas">  
+    <ul id="task-list"></ul>
+  </div>
+  <div id="add-task-container">
+    <input id="task-name" type="text" placeholder="Introducir tarea..."></input>
     <button id="fab-add">+</button>
-    </div>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>

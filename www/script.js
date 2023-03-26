@@ -1,153 +1,133 @@
-/* Este es un código de JavaScript que utiliza Fetch API y manipula el DOM para crear una lista de tareas en una página web.*/
 const taskList = [];
+const taskList2 = document.getElementById("task-list");
+let startX;
+let timer;
+let startY;
 
-const taskListElem = document.querySelector("#tasklist");
+function createLi(task) {
+  const taskItem = document.createElement("li");
+  taskItem.id = task.id;
+  taskItem.textContent = task.title;
+  taskList2.appendChild(taskItem);
+  taskItem.style.backgroundColor = task.done ? "green" : "red"; //ternary operator for color based on task.done value
+  taskItem.addEventListener('touchstart', function(e) {
+  startX = e.touches[0].pageX;
+  startY = e.touches[0].pageY;
+  timer = setTimeout(function() {
+  toggleDone(e);
+  }, 2000);
+  });
+  taskItem.addEventListener('touchmove', function(e) {
+  clearTimeout(timer);
+  });
+  taskItem.addEventListener('touchend', function(e) {
+  let endX = e.changedTouches[0].pageX;
+  let endY = e.changedTouches[0].pageY;
+  let distance = endX - startX;
+  let absDistanceX = Math.abs(distance);
+  let absDistanceY = Math.abs(endY - startY);
+  if (endX > startX && distance >= 50 && absDistanceY < 10) {
+  remove();
+  }
+  clearTimeout(timer);
+  });
+}
 
-/* Primero, se crea un array vacío llamado taskList, y se selecciona un elemento HTML con el ID "tasklist" utilizando querySelector. Esto se hace para poder agregar y eliminar elementos de la lista de tareas.
+async function loadTasks() {
+  const response = await fetch("/tasks/get");
+  const tasks = await response.json(); // better naming for the variable
+  tasks.forEach(task => {
+  taskList.push(task);
+  createLi(task);
+  });
+  Swal.fire({ //alert refactor for more reusability
+  icon: 'success',
+  title: 'Tareas añadidas',
+  showConfirmButton: false,
+  timer: 2000
+  }).then(() => {
+  navigator.vibrate(300); //navigator.vibrate inside then() to ensure the alert is closed
+  });
+}
 
-Luego se define una función asíncrona llamada loadTasks. Esta función utiliza la función fetch para obtener datos desde la URL "/tasks/get", y luego utiliza el método json para convertir la respuesta en un objeto JSON. A continuación, se recorre cada elemento del objeto JSON utilizando el método forEach, y se crea un elemento HTML <li> con el título de la tarea y se agrega a la lista de tareas con appendChild. Esta función también maneja cualquier error que pueda ocurrir al obtener los datos utilizando un bloque try/catch.
-
-Después se llama la función loadTasks para cargar la lista de tareas desde el servidor. 
-*/
-
-const loadTasks = async () => {
-  try {
-    const response = await fetch("/tasks/get");
-    const data = await response.json();
-    console.log(data);
-    data.forEach(item => {
-      const li = document.createElement("li");
-      li.innerHTML = item.title;
-      taskListElem.appendChild(li);
+function add() {
+  const input = document.getElementById("task-name");
+  const title = input.value.trim();
+  if (title.length > 0) {
+    const id = taskList.reduce((max, t) => t.id > max ? t.id : max, -1) + 1; //using reduce to get the max id and avoiding for loop
+    const task = { id, title, done: false };
+    taskList.push(task);
+    updateJson();
+    input.value = '';
+    createLi(task);
+    Swal.fire({
+    icon: 'success',
+    title: 'Tarea añadida',
+    showConfirmButton: false,
+    timer: 2000
+    }).then(() => {
+    navigator.vibrate(300);
     });
-  } catch (err) {
-    console.log(err);
   }
-};
+}
 
-loadTasks();
-
-/* Hay una función asíncrona llamada updateTasksOnServer. 
-Esta función utiliza fetch para enviar una solicitud POST a la URL "/tasklist/update"
- con el array taskList convertido a formato JSON en el cuerpo de la solicitud. 
- También se especifica que el tipo de contenido es JSON en los encabezados. La respuesta
-  del servidor también se convierte a un objeto JSON utilizando json, y se imprime 
-  en la consola con console.log. Al igual que loadTasks, esta función también maneja 
-  cualquier error que pueda ocurrir utilizando try/catch. 
-*/
-const updateTasksOnServer = async () => {
-  try {
-    const response = await fetch("/tasklist/update", {
-      method: "POST",
-      body: JSON.stringify(taskList),
-      headers: {
-        "Content-Type": "application/json"
-      }
+function remove() {
+  const taskItem = event.target;
+  const taskId = taskItem.id;
+  const index = taskList.findIndex(task => task.id == taskId); //using findIndex to get the index of the task to remove
+  if (index !== -1) {
+    taskList.splice(index, 1);
+    updateJson();
+    taskItem.parentNode.removeChild(taskItem);
+    Swal.fire({
+    icon: 'warning',
+    title: 'Tarea eliminada',
+    showConfirmButton: false,
+    timer: 2000,
+    }).then(() => {
+    navigator.vibrate(300);
     });
-    const data = await response.json();
-    console.log(data);
-  } catch (err) {
-    console.log(err);
   }
+}
+
+const toggleDone = (event) => {
+  const taskItem = event.target.closest('li');
+  if (!taskItem) return;
+
+  const taskId = taskItem.id;
+  const task = taskList.find(t => t.id === taskId);
+  if (!task) return;
+
+  task.done = !task.done;
+  updateJson();
+
+  const successIcon = task.done ? 'success' : 'warning';
+  const successMessage = task.done ? 'Tarea completada' : 'Tarea reactivada';
+
+  taskItem.style.backgroundColor = task.done ? 'green' : 'red';
+  Swal.fire({
+    icon: successIcon,
+    title: successMessage,
+    showConfirmButton: false,
+    timer: 2000,
+  });
+  navigator.vibrate(300);
 };
 
-/* Hay una función asíncrona llamada add. Esta función se llama cuando se hace clic en el botón "Agregar" (identificado por el elemento HTML con el ID "fab-add").
- Primero, se selecciona el elemento de entrada de texto para obtener el valor del nombre 
- de la tarea. Si el valor no está vacío, se crea un nuevo objeto de tarea con un ID único, 
- el título de la tarea y el valor booleano "hecho" establecido en falso. Este objeto se 
- agrega al array taskList, y se crea un elemento HTML <li> con el título de la tarea y se 
- agrega a la lista de tareas con appendChild. Luego se borra el valor del campo de entrada 
- de texto y se llama a la función updateTasksOnServer. */
-const add = async () => {
-  const taskNameInput = document.querySelector("#task-name");
-  const taskName = taskNameInput.value.trim();
-  if (taskName !== "") {
-    const newTask = {
-      id: taskList.length + 1,
-      title: taskName,
-      done: false
-    };
-    taskList.push(newTask);
-    const li = document.createElement("li");
-    li.innerHTML = newTask.title;
-    li.dataset.id = newTask.id;
-    taskListElem.appendChild(li);
-    taskNameInput.value = "";
-    await updateTasksOnServer();
-  }
-};
-
-/*Remove se llama cuando se desliza un elemento de la lista de tareas hacia la derecha. 
-La función busca el índice del elemento en el array taskList, y si lo encuentra, elimina 
-ese elemento del array utilizando el método splice. También elimina el elemento correspondiente 
-del DOM utilizando remove, y llama a updateTasksOnServer para actualizar los datos en el servidor.*/
-const remove = async id => {
-  const taskIndex = taskList.findIndex(task => task.id === id);
-  if (taskIndex !== -1) {
-    taskList.splice(taskIndex, 1);
-    const taskElem = document.querySelector(`li[data-id="${id}"]`);
-    taskElem.remove();
-    await updateTasksOnServer();
-  }
-};
-
-/*toggleDone se llama cuando se toca un elemento de la lista de tareas durante un cierto tiempo.
- La función busca el índice del elemento en el array taskList, y si lo encuentra, cambia el valor 
- de la propiedad "hecho" del objeto tarea utilizando el operador de negación. 
-También cambia la clase CSS del elemento correspondiente para mostrar si está hecho o no, y llama 
-a updateTasksOnServer para actualizar los datos en el servidor.*/
-const toggleDone = async id => {
-  const taskIndex = taskList.findIndex(task => task.id === id);
-  if (taskIndex !== -1) {
-    taskList[taskIndex].done = !taskList[taskIndex].done;
-    const taskElem = document.querySelector(`li[data-id="${id}"]`);
-    taskElem.classList.toggle("done");
-    await updateTasksOnServer();
-  }
-};
+//Funcion para actualizar el fichero json
+const updateJson = async () => {
+  const respuesta = await fetch("/tasklist/update", {
+    method: "POST",
+    headers: {
+      'Accept': "application/json",
+      'Content-Type': "application/json",
+    },
+    body: JSON.stringify(taskList)
+  });
+  const mensaje = await respuesta.text();
+  console.log(mensaje);
+}
 
 const addButton = document.querySelector("#fab-add");
-
-addButton.addEventListener("touchend", add);
-
-taskListElem.addEventListener("touchstart", event => {
-  const touch = event.touches[0];
-  const taskElem = touch.target.closest("li");
-  if (taskElem) {
-    const taskId = parseInt(taskElem.dataset.id);
-    taskElem.dataset.startX = touch.clientX;
-    taskElem.dataset.startY = touch.clientY;
-    taskElem.dataset.startTime = Date.now();
-    taskElem.dataset.touched = true;
-    setTimeout(() => {
-      if (taskElem.dataset.touched === "true") {
-        toggleDone(taskId);
-      }
-    }, 2000);
-  }
-});
-
-taskListElem.addEventListener("touchmove", event => {
-  const touch = event.touches[0];
-  const taskElem = touch.target.closest("li");
-  if (taskElem && taskElem.dataset.touched === "true") {
-    const deltaX = touch.clientX - taskElem.dataset.startX;
-    const deltaY = touch.clientY - taskElem.dataset.startY;
-    const absDeltaX = Math.abs(deltaX);
-    const absDeltaY = Math.abs(deltaY);
-    if (absDeltaX > 10 && absDeltaX > absDeltaY) {
-      taskElem.dataset.touched = false;
-      if (deltaX > 0) {
-        remove(parseInt(taskElem.dataset.id));
-      }
-    }
-  }
-});
-
-taskListElem.addEventListener("touchend", event => {
-  const touch = event.changedTouches[0];
-  const taskElem = touch.target.closest("li");
-  if (taskElem) {
-    taskElem.dataset.touched = false;
-  }
-});
+loadTasks(); //Mostrar tareas
+addButton.addEventListener("click", add); //Añadir tarea
